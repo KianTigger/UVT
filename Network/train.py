@@ -39,6 +39,8 @@ def train(  dataset_path,
             attention_heads = 16
             ):
     
+    print("Training", modelname)
+    
     # Seed RNGs
     np.random.seed(seed)
     torch.manual_seed(seed)
