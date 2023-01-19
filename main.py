@@ -10,6 +10,8 @@ if __name__ == '__main__':
 
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
+    # for HPC Bessemer
+    dataset_path = "../Echonet-Dynamic"
     # model_path="./output/UVT_M_CLA"
     # model_path="./output/UVT_R_CLA"
     # model_path="./output/UVT_M_REG"
