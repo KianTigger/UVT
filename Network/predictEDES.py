@@ -108,13 +108,13 @@ def predictEDES(dataset_path,
                 nB, nF, nC, nH, nW = video.shape
 
                 # Merge batch and frames dimension
-                if mirror_vid:
-                    offset = fps.item()
-                    video = video[0]  # squeeze batch dimension
-                    video = torch.cat((video.flip(0)[-offset:-1, :, :, :], video, video.flip(0)[
-                                      1:offset, :, :, :]), dim=0)  # mirror start and end
-                    nF, nC, nH, nW = video.shape  # update nF
-                else:
+                # if mirror_vid:
+                #     offset = fps.item()
+                #     video = video[0]  # squeeze batch dimension
+                #     video = torch.cat((video.flip(0)[-offset:-1, :, :, :], video, video.flip(0)[
+                #                       1:offset, :, :, :]), dim=0)  # mirror start and end
+                #     nF, nC, nH, nW = video.shape  # update nF
+                if not(mirror_vid):
                     video = torch.cat(
                         ([video[i] for i in range(video.size(0))]), dim=0)
                 video = video.to(device, dtype=torch.float)
@@ -126,7 +126,7 @@ def predictEDES(dataset_path,
                     class_vec = class_vec.squeeze().cpu()
                 if rm_branch != 'EF':
                     ef_pred = ef_pred.cpu().item()
-                fps = fps.item()
+                # fps = fps.item()
 
                 if SDmode == 'reg' and dsdtmode == 'full':
 
