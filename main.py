@@ -1,23 +1,32 @@
 import os
 import Network
+import argparse
 
-train = False
-test = True
-predict = False
+# train = False
+# test = True
+# predict = False
+
+# model_path="./output/UVT_M_CLA"
+# model_path="./output/UVT_R_CLA"
+# model_path="./output/UVT_M_REG"
+# model_path="./output/UVT_R_REG"
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train", default=False, type=bool, help="Whether to train the model.")
+    parser.add_argument("--test", default=True, type=bool, help="Whether to test the model.")
+    parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
+    parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, help="The path to the model. options are 'UVT_M_CLA', 'UVT_R_CLA', 'UVT_M_REG', 'UVT_R_REG")
+    args = parser.parse_args()
 
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
     dataset_path = "../Echonet-Dynamic"
-    # model_path="./output/UVT_M_CLA"
-    # model_path="./output/UVT_R_CLA"
-    # model_path="./output/UVT_M_REG"
-    model_path="./output/UVT_R_REG"
 
-    if train:
+
+    if args.train:
         Network.train(  dataset_path=dataset_path,  # path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
                     num_epochs=5,               # number of epoch to train
                     device=[0],                 # "cpu" or gpu ids, ex [0] or [0,1] or [2] etc
@@ -25,7 +34,7 @@ if __name__ == '__main__':
                     seed=0,                     # random seed for reproducibility
                     run_test=False,             # run test loop after each epoch
                     lr = 1e-5,                  # learning rate
-                    modelname="UVT_repeat_reg",         # name of the folder where weight files will be stored
+                    modelname="UVT_repeat_reg", # name of the folder where weight files will be stored
                     latent_dim=1024,            # embedding dimension
                     lr_step_period=3,           # number of epoch before dividing the learning rate by 10
                     ds_max_length = 128,        # maximum number of frame during training
@@ -39,7 +48,7 @@ if __name__ == '__main__':
                     attention_heads = 16        # number of attention heads in each Transformer
                     )
 
-    if test:
+    if args.test:
         # Parameters must match train-time parameters, or the weight files wont load
         Network.test(   dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
                     SDmode='reg',               # SD branch network type: reg (regression) or cla (classification)
@@ -48,11 +57,11 @@ if __name__ == '__main__':
                     num_hidden_layers=16,       # Number of Transformers
                     intermediate_size=8192,     # Size of the main MLP inside of the Transformers
                     # model_path="./output/UVT_repeat_reg",# path of trained weight
-                    model_path=model_path,      # path of trained weight
+                    model_path=args.model_path,      # path of trained weight
                     device=[0]
                     )
 
-    if predict:
+    if args.predict:
         # Parameters must match train-time parameters, or the weight files wont load
         Network.predictEDES(   
                     dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
@@ -61,6 +70,6 @@ if __name__ == '__main__':
                     latent_dim=1024,            # embedding dimension
                     num_hidden_layers=16,       # Number of Transformers
                     intermediate_size=8192,     # Size of the main MLP inside of the Transformers
-                    model_path=model_path,      # path of trained weight
+                    model_path=args.model_path,      # path of trained weight
                     device=[0]
                     )
