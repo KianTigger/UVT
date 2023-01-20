@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
-    dataset_path = "../"
+    dataset_path = "../EchoNet-Dynamic"
 
     if os.path.exists(dataset_path):
         print("Dataset path does exist.")
