@@ -18,7 +18,8 @@ class EchoSet(torch.utils.data.Dataset):
                  pad=8,
                  random_clip=False,
                  dataset_mode='repeat',
-                 SDmode = 'reg' # reg, cla
+                 SDmode = 'reg', # reg, cla
+                 train=True,
                  ):
 
         self.folder       = pathlib.Path(root)
@@ -39,7 +40,7 @@ class EchoSet(torch.utils.data.Dataset):
 
         if not os.path.exists(root):
             raise ValueError("Path does not exist: "+root)
-
+            
         with open(self.folder / "FileList.csv") as f:
             self.header   = f.readline().strip().split(",")
             filenameIndex = self.header.index("FileName")
@@ -97,14 +98,15 @@ class EchoSet(torch.utils.data.Dataset):
             for frame in self.frames[filename]:
                 self.trace[filename][frame] = np.array(self.trace[filename][frame])
         
-        # Reject all files which do not have both ED and ES frames
-        keep = [(len(self.frames[os.path.splitext(f)[0]]) >= 2) and (abs(self.frames[os.path.splitext(f)[0]][0] - self.frames[os.path.splitext(f)[0]][-1]) > self.min_length) for f in self.fnames]
+        # Reject all files which do not have both ED and ES frames if train is True
+        if train:
+            keep = [(len(self.frames[os.path.splitext(f)[0]]) >= 2) and (abs(self.frames[os.path.splitext(f)[0]][0] - self.frames[os.path.splitext(f)[0]][-1]) > self.min_length) for f in self.fnames]
 
-        # Prepare for getitem
-        self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
-        self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
-        self.ejection = [f for (f, k) in zip(self.ejection, keep) if k]
-        self.fps = [f for (f, k) in zip(self.fps, keep) if k]
+            # Prepare for getitem
+            self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
+            self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
+            self.ejection = [f for (f, k) in zip(self.ejection, keep) if k]
+            self.fps = [f for (f, k) in zip(self.fps, keep) if k]
             
     def __getitem__(self, index):
         

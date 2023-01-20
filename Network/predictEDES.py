@@ -20,76 +20,6 @@ from Network.dataloader import EchoSet
 import torch
 import tqdm
 
-
-def predict_ef_es(model, video, fps, mirror_vid=False, rm_branch='None', SDmode='reg', dsdtmode='full', mean_dist_coef=1.5, smooth_window=5, smooth_rep=3, device='cpu'):
-    
-    
-    with torch.no_grad():
-        nB, nF, nC, nH, nW = video.shape
-
-        # Merge batch and frames dimension
-        if mirror_vid:
-            offset = fps.item()
-            video = video[0]  # squeeze batch dimension
-            video = torch.cat((video.flip(0)[-offset:-1, :, :, :], video, video.flip(0)[
-                              1:offset, :, :, :]), dim=0)  # mirror start and end
-            nF, nC, nH, nW = video.shape  # update nF
-        else:
-            video = torch.cat(
-                ([video[i] for i in range(video.size(0))]), dim=0)
-        video = video.to(device, dtype=torch.float)
-
-        # AE.encode -> Transformer +-> class_vec
-        #                          L-> ef_pred
-        class_vec, ef_pred = model(video, nB, nF)
-        if rm_branch != 'SD':
-            class_vec = class_vec.squeeze().cpu()
-        if rm_branch != 'EF':
-            ef_pred = ef_pred.cpu().item()
-
-        if SDmode == 'reg' and dsdtmode == 'full':
-            # Prepare ground truth
-            smooth_vec = smooth(
-                class_vec, window=smooth_window, rep=smooth_rep)
-
-            zero_crossing = ((smooth_vec.sign().roll(
-                1) - smooth_vec.sign()) != 0).to(dtype=torch.long)
-            zero_crossing[0] = 0
-
-            # Find heart phases and clean noise
-            peak_indices = torch.where(zero_crossing == 1)[0]
-            if peak_indices.shape[0] < 3:
-                zero_crossing[0] = 0
-                zero_crossing[-1] = 1
-            else:
-                peak_dist = (peak_indices-peak_indices.roll(1))[1:]
-                mean_dist = peak_dist.to(torch.float).mean()
-                while ((peak_dist[peak_dist < mean_dist*mean_dist_coef] > 0).sum() > 0).item():
-                    bad_peaks = torch.where(
-                        peak_dist < mean_dist*mean_dist_coef)[0][0].item()
-                    bp1 = peak_indices[bad_peaks].item()
-                    bp2 = peak_indices[bad_peaks+1].item()
-                    new_peak = int((bp1+bp2)/2)
-
-                    peak_indices = torch.cat((peak_indices[:bad_peaks], torch.tensor(
-                        [new_peak]), peak_indices[bad_peaks+2:]), axis=0)
-                    peak_dist = (peak_indices-peak_indices.roll(1))[1:]
-        peak_class = []
-        peak_intensity = []
-        peak_index = []
-        for i in range(peak_indices.shape[0]-1):
-            peak_class.append(
-                np.sign(class_vec[peak_indices[i]:peak_indices[i+1]].numpy().mean()))
-            peak_index.append(
-                peak_indices[i] + np.argmax(class_vec[peak_indices[i]:peak_indices[i+1]].numpy()))
-            peak_intensity.append(class_vec[peak_index[-1]].item())
-
-        ED_frames = [x for x in peak_index if peak_class[x] == -1]
-        ES_frames = [x for x in peak_index if peak_class[x] == 1]
-
-    return ED_frames, ES_frames
-
-
 def predictEDES(dataset_path,
          SDmode='reg',
          DTmode='repeat',
@@ -145,9 +75,9 @@ def predictEDES(dataset_path,
     model.eval()
 
     # Load data
-    dataset = EchoSet(dataset_path, split="test", min_spacing=10, max_length=fixed_length,
-                      fixed_length=fixed_length, pad=8, random_clip=False, dataset_mode=dsdtmode, SDmode=SDmode)
-
+    dataset = EchoSet(dataset_path, split="all", min_spacing=10, max_length=fixed_length,
+                      fixed_length=fixed_length, pad=8, random_clip=False, 
+                      dataset_mode=dsdtmode, SDmode=SDmode, train=False)
     loader = torch.utils.data.DataLoader(
         dataset, batch_size=1, num_workers=0, shuffle=False)
 
@@ -165,14 +95,13 @@ def predictEDES(dataset_path,
     results = []
     broken = 0
 
+    phase_predictions = []
+    count = 0
+
     with torch.no_grad():
         with tqdm.tqdm(total=len(loader)) as pbar:
-            for (filename, video, label, ejection, repeat, fps) in loader:
-
-                predict_ef_es(model, video, fps, device=device,
-                              mirror_vid=mirror_vid)
-                continue
-
+            for (filename, video, label, _, repeat, fps) in loader:
+                count += 1
                 nB, nF, nC, nH, nW = video.shape
 
                 # Merge batch and frames dimension
@@ -187,16 +116,13 @@ def predictEDES(dataset_path,
                         ([video[i] for i in range(video.size(0))]), dim=0)
                 video = video.to(device, dtype=torch.float)
 
-                ef_label = (ejection/100.0).item()
-
                 # AE.encode -> Transformer +-> class_vec
                 #                          L-> ef_pred
                 class_vec, ef_pred = model(video, nB, nF)
-                if not (rm_branch == 'SD'):
+                if rm_branch != 'SD':
                     class_vec = class_vec.squeeze().cpu()
-                if not (rm_branch == 'EF'):
+                if rm_branch != 'EF':
                     ef_pred = ef_pred.cpu().item()
-                breaker = False
                 fps = fps.item()
 
                 if SDmode == 'reg' and dsdtmode == 'full':
@@ -204,7 +130,7 @@ def predictEDES(dataset_path,
                     # Prepare ground truth
                     small_label = torch.where(label[0] == -1)[0][0].item()
                     large_label = torch.where(label[0] == 1)[0][0].item()
-                    if not (rm_branch == 'SD'):
+                    if rm_branch != 'SD':
                         smooth_vec = smooth(class_vec, window=5, rep=3)
 
                         zero_crossing = ((smooth_vec.sign().roll(
@@ -215,7 +141,6 @@ def predictEDES(dataset_path,
 
                         peak_indices = torch.where(zero_crossing == 1)[0]
                         if peak_indices.shape[0] < 3:
-                            breaker = True
                             zero_crossing[0] = 0
                             zero_crossing[-1] = 1
                         else:
@@ -244,14 +169,6 @@ def predictEDES(dataset_path,
                                 peak_intensity.append(
                                     peak_class[-1] * class_vec[peak_index[-1]])
 
-                            not_entertwined = False
-                            previous = 0
-                            for e in peak_class:
-                                if e == previous:
-                                    not_entertwined = True
-                                    break
-                                previous = e
-
                             if mirror_vid:
                                 video = video[offset-1:-offset+1]
                                 class_vec = class_vec[offset-1:-offset+1]
@@ -268,57 +185,13 @@ def predictEDES(dataset_path,
                                     offset-1)).logical_and(peak_index < (nF-offset+1))].numpy()
                                 peak_index = peak_index-(offset-1)
 
-                            # Get peak errors:
-                            closest_ED_index = 0
-                            closest_ES_index = 0
-                            small_error = torch.tensor(999)
-                            large_error = torch.tensor(999)
-                            count_small_peaks = np.where(
-                                np.array(peak_class) == -1)[0].shape[0]
-                            count_large_peaks = np.where(
-                                np.array(peak_class) == 1)[0].shape[0]
-                            for (mclass, mintensity, mindex) in zip(peak_class, peak_intensity, peak_index):
-                                if mclass == -1 and abs(mindex - small_label) < abs(small_error):
-                                    small_error = mindex - small_label
-                                    closest_ES_index = mindex
-                                elif mclass == 1 and abs(mindex - large_label) < abs(large_error):
-                                    large_error = mindex - large_label
-                                    closest_ED_index = mindex
-
-                            small_error_aFD = small_error.item()
-                            large_error_aFD = large_error.item()
-                            small_error_std = 0
-                            large_error_std = 0
-
-                    else:  # If class vec is false
-                        small_error_aFD = large_error_aFD = small_error_std = large_error_std = count_small_peaks = count_large_peaks = not_entertwined = 0
-                        small_hr = large_hr = uneven_hr = 0
-
-                    # Get EF errors:
-                    if not (rm_branch == 'EF'):
-                        ef_pred = ef_pred*100
-                        ef_label = ef_label*100
-                        ef_error = ef_pred - ef_label
-                        ef_abs_error = abs(ef_error)
-                    else:
-                        ef_pred = 0
-                        ef_label = 0
-                        ef_error = 0
-                        ef_abs_error = 0
-
-                    # Get Heartrate
-                    if not (rm_branch == 'SD') and not breaker:
-                        uneven_hr = False
-                        small_peaks = [i.item() for c, i in zip(
-                            peak_class, peak_index) if c == -1]
-                        large_peaks = [i.item() for c, i in zip(
-                            peak_class, peak_index) if c == 1]
-                        _, small_hr, _, _, _ = get_heartrate(small_peaks)
-                        _, large_hr, _, _, _ = get_heartrate(large_peaks)
-                        small_hr = small_hr/fps*60.0
-                        large_hr = large_hr/fps*60.0
-                        if min(small_hr, large_hr) < max(small_hr, large_hr)*0.8 or len(small_peaks) < 2 or len(large_peaks) < 2:
-                            uneven_hr = True
+                            # reg mode requites i.item() to convert from tensor to int
+                            ED_predictions = [i.item() for c, i in zip(
+                                peak_class, peak_index) if c == -1]
+                            ES_predictions = [i.item() for c, i in zip(
+                                peak_class, peak_index) if c == 1]
+                            phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                            phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
                     if plot_graph or save_graph:
                         plt.plot(-class_vec.numpy().reshape(-1),
@@ -354,7 +227,7 @@ def predictEDES(dataset_path,
 
                 elif SDmode == 'reg' and dsdtmode == 'repeat':
 
-                    if not (rm_branch == 'SD'):
+                    if rm_branch != 'SD':
 
                         label = label[0]
 
@@ -368,9 +241,6 @@ def predictEDES(dataset_path,
                         peak_indices = torch.where(zero_crossing == 1)[0]
                         peak_dist = (peak_indices-peak_indices.roll(1))[1:]
                         mean_dist = peak_dist.to(torch.float).mean()
-
-                        small_labels = torch.where(label == -1)[0]
-                        large_labels = torch.where(label == 1)[0]
 
                         peak_class = []
                         peak_intensity = []
@@ -386,69 +256,15 @@ def predictEDES(dataset_path,
                             )
                             peak_intensity.append(
                                 peak_class[-1] * class_vec[peak_index[-1]])
-
-                        not_entertwined = False
-                        previous = 0
-                        for e in peak_class:
-                            if e == previous:
-                                not_entertwined = True
-                                break
-                            previous = e
-
-                        # Get peak errors:
-                        small_errors = []
-                        large_errors = []
-                        count_small_peaks = np.where(
-                            np.array(peak_class) == -1)[0].shape[0]
-                        count_large_peaks = np.where(
-                            np.array(peak_class) == 1)[0].shape[0]
-
-                        for peak in small_labels:
-                            small_error = 999
-                            for (mclass, mindex) in zip(peak_class, peak_index):
-                                if mclass == -1 and abs(mindex - peak.item()) < abs(small_error):
-                                    small_error = mindex - peak.item()
-                            small_errors.append(small_error)
-
-                        for peak in large_labels:
-                            large_error = 999
-                            for (mclass, mindex) in zip(peak_class, peak_index):
-                                if mclass == 1 and abs(mindex - peak.item()) < abs(large_error):
-                                    large_error = mindex - peak.item()
-                            large_errors.append(large_error)
-
-                        small_error_aFD = np.mean(np.abs(small_errors))
-                        large_error_aFD = np.mean(np.abs(large_errors))
-                        small_error_std = np.std(np.abs(small_errors))
-                        large_error_std = np.std(np.abs(large_errors))
-
-                    else:
-                        small_error_aFD = large_error_aFD = small_error_std = large_error_std = count_small_peaks = count_large_peaks = not_entertwined = 0
-                        small_hr = large_hr = uneven_hr = 0
-
-                    # Get EF errors:
-                    if not (rm_branch == 'EF'):
-                        ef_pred = ef_pred*100
-                        ef_label = ef_label*100
-                        ef_error = ef_pred - ef_label
-                        ef_abs_error = abs(ef_error)
-                    else:
-                        ef_pred = 0
-                        ef_label = 0
-                        ef_error = 0
-                        ef_abs_error = 0
-
-                    if not (rm_branch == 'SD'):
-                        # Get Heartrate
-                        uneven_hr = False
-                        small_peaks = [i for c, i in zip(
+                        
+                        # reg mode requites i.item() to convert from tensor to int
+                        ED_predictions = [i.item() for c, i in zip(
                             peak_class, peak_index) if c == -1]
-                        large_peaks = [i for c, i in zip(
+                        ES_predictions = [i.item() for c, i in zip(
                             peak_class, peak_index) if c == 1]
-                        _, small_hr, _, _, _ = get_heartrate(small_peaks)
-                        _, large_hr, _, _, _ = get_heartrate(large_peaks)
-                        if min(small_hr, large_hr) < max(small_hr, large_hr)*0.8:
-                            uneven_hr = True
+                        phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                        phase_predictions.append((count, filename[0], "ES", ES_predictions))
+
 
                     if plot_graph:
                         plt.plot(class_vec.numpy().reshape(-1),
@@ -478,23 +294,6 @@ def predictEDES(dataset_path,
                     small_pred_index = class_vec.argmin().item()
                     large_pred_index = class_vec.argmax().item()
 
-                    small_error_aFD = abs(small_pred_index-small_label)
-                    large_error_aFD = abs(large_pred_index-large_label)
-                    small_error_std = large_error_std = 0
-
-                    count_small_peaks = count_large_peaks = 1
-                    not_entertwined = False
-
-                    # Get EF errors:
-                    ef_pred = ef_pred*100
-                    ef_label = ef_label*100
-                    ef_error = ef_pred - ef_label
-                    ef_abs_error = abs(ef_error)
-
-                    # Get Heartrate
-                    uneven_hr = False
-                    small_hr = large_hr = 0
-
                     if plot_graph:
                         plt.plot(class_vec.numpy().reshape(-1),
                                  label='class pred')
@@ -519,12 +318,7 @@ def predictEDES(dataset_path,
 
                     # Find heart phases and clean noise
                     peak_indices = torch.where(zero_crossing == 1)[0]
-                    if peak_indices.shape[0] < 3:
-                        small_error_aFD = large_error_aFD = small_error_std = large_error_std = count_small_peaks = count_large_peaks = not_entertwined = 0
-                        ef_pred = ef_label = ef_error = ef_abs_error = 0
-                        small_hr = large_hr = uneven_hr = 0
-                        breaker = True
-                    else:
+                    if peak_indices.shape[0] >= 3:
                         peak_dist = (peak_indices-peak_indices.roll(1))[1:]
                         mean_dist = peak_dist.to(torch.float).mean()
                         while ((peak_dist[peak_dist < mean_dist*mean_dist_coef] > 0).sum() > 0).item():
@@ -551,52 +345,13 @@ def predictEDES(dataset_path,
                                      class_vec[peak_indices[i]:peak_indices[i+1], peak_class[-1]].abs().sum()).numpy()).sum().round())
                             )
                             peak_intensity.append(class_vec[peak_index[-1]])
-
-                        not_entertwined = False
-                        previous = 0
-                        for e in peak_class:
-                            if e == previous:
-                                not_entertwined = True
-                                break
-                            previous = e
-
-                        # Get peak errors:
-                        small_error = 999
-                        large_error = 999
-                        count_small_peaks = np.where(
-                            np.array(peak_class) == 1)[0].shape[0]
-                        count_large_peaks = np.where(
-                            np.array(peak_class) == 2)[0].shape[0]
-                        for (mclass, mintensity, mindex) in zip(peak_class, peak_intensity, peak_index):
-                            if mclass == 1 and abs(mindex - small_label) < abs(small_error):
-                                small_error = mindex - small_label
-                            elif mclass == 2 and abs(mindex - large_label) < abs(large_error):
-                                large_error = mindex - large_label
-
-                        small_error_aFD = small_error
-                        large_error_aFD = large_error
-                        small_error_std = 0
-                        large_error_std = 0
-
-                        if small_error_aFD == 999 or large_error_aFD == 999:
-                            breaker = True
-
-                        # Get EF errors:
-                        ef_pred = ef_pred*100
-                        ef_label = ef_label*100
-                        ef_error = ef_pred - ef_label
-                        ef_abs_error = abs(ef_error)
-
-                        # Get Heartrate
-                        uneven_hr = False
-                        small_peaks = [i for c, i in zip(
-                            peak_class, peak_index) if c == -1]
-                        large_peaks = [i for c, i in zip(
+                        
+                        ED_predictions = [i for c, i in zip(
                             peak_class, peak_index) if c == 1]
-                        _, small_hr, _, _, _ = get_heartrate(small_peaks)
-                        _, large_hr, _, _, _ = get_heartrate(large_peaks)
-                        if min(small_hr, large_hr) < max(small_hr, large_hr)*0.8:
-                            uneven_hr = True
+                        ES_predictions = [i for c, i in zip(
+                            peak_class, peak_index) if c == 2]
+                        phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                        phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
                 elif SDmode == 'cla' and dsdtmode == 'repeat':
 
@@ -613,8 +368,6 @@ def predictEDES(dataset_path,
 
                     label[:peak_indices[0]] = 0
                     label[peak_indices[-1]+1:] = 0
-                    small_labels = torch.where(label == 1)[0]
-                    large_labels = torch.where(label == 2)[0]
 
                     peak_class = []
                     peak_intensity = []
@@ -631,75 +384,12 @@ def predictEDES(dataset_path,
                         )
                         peak_intensity.append(class_vec[peak_index[-1]])
 
-                    not_entertwined = False
-                    previous = 0
-                    for e in peak_class:
-                        if e == previous:
-                            not_entertwined = True
-                            break
-                        previous = e
-
-                    # Get peak errors:
-                    small_errors = []
-                    large_errors = []
-                    count_small_peaks = np.where(
-                        np.array(peak_class) == 1)[0].shape[0]
-                    count_large_peaks = np.where(
-                        np.array(peak_class) == 2)[0].shape[0]
-
-                    for peak in small_labels:
-                        small_error = 999
-                        for (mclass, mindex) in zip(peak_class, peak_index):
-                            if mclass == 1 and abs(mindex - peak.item()) < abs(small_error):
-                                small_error = mindex - peak.item()
-                        if small_error == 999:
-                            raise ValueError('wtf??')
-                        small_errors.append(small_error)
-
-                    for peak in large_labels:
-                        large_error = 999
-                        for (mclass, mindex) in zip(peak_class, peak_index):
-                            if mclass == 2 and abs(mindex - peak.item()) < abs(large_error):
-                                large_error = mindex - peak.item()
-                        if large_error == 999:
-                            raise ValueError('wtf??')
-                        large_errors.append(large_error)
-
-                    small_error_aFD = np.mean(np.abs(small_errors))
-                    large_error_aFD = np.mean(np.abs(large_errors))
-                    small_error_std = np.std(np.abs(small_errors))
-                    large_error_std = np.std(np.abs(large_errors))
-
-                    # Get EF errors:
-                    ef_pred = ef_pred*100
-                    ef_label = ef_label*100
-                    ef_error = ef_pred - ef_label
-                    ef_abs_error = abs(ef_error)
-
-                    # Get Heartrate
-                    uneven_hr = False
-                    small_peaks = [i for c, i in zip(
-                        peak_class, peak_index) if c == -1]
-                    large_peaks = [i for c, i in zip(
+                    ED_predictions = [i for c, i in zip(
                         peak_class, peak_index) if c == 1]
-                    _, small_hr, _, _, _ = get_heartrate(small_peaks)
-                    _, large_hr, _, _, _ = get_heartrate(large_peaks)
-                    if min(small_hr, large_hr) < max(small_hr, large_hr)*0.8:
-                        uneven_hr = True
-
-                    if plot_graph:
-                        plt.plot(class_vec[:, 0].numpy(
-                        ).reshape(-1), label='transition')
-                        plt.plot(
-                            class_vec[:, 1].numpy().reshape(-1), label='ES')
-                        plt.plot(
-                            class_vec[:, 2].numpy().reshape(-1), label='ED')
-                        plt.plot(zero_crossing, label='ZC')
-                        plt.plot(label.numpy(), label='class label')
-                        # plt.axvline(x=small_pred_index, color= 'b')
-                        # plt.axvline(x=large_pred_index, color= 'g')
-                        plt.legend()
-                        plt.show()
+                    ES_predictions = [i for c, i in zip(
+                        peak_class, peak_index) if c == 2]
+                    phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                    phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
                 elif SDmode == 'cla' and dsdtmode == 'sample':
                     attention = repeat.view(-1) == 1
@@ -718,23 +408,6 @@ def predictEDES(dataset_path,
                     small_pred_index = class_vec[:, 1].argmax().item()
                     large_pred_index = class_vec[:, 2].argmax().item()
 
-                    small_error_aFD = abs(small_pred_index-small_label)
-                    large_error_aFD = abs(large_pred_index-large_label)
-                    small_error_std = large_error_std = 0
-
-                    count_small_peaks = count_large_peaks = 1
-                    not_entertwined = False
-
-                    # Get EF errors:
-                    ef_pred = ef_pred*100
-                    ef_label = ef_label*100
-                    ef_error = ef_pred - ef_label
-                    ef_abs_error = abs(ef_error)
-
-                    # Get Heartrate
-                    uneven_hr = False
-                    small_hr = large_hr = 0
-
                     if plot_graph:
                         plt.plot(class_vec.numpy().reshape(-1),
                                  label='class pred')
@@ -745,24 +418,26 @@ def predictEDES(dataset_path,
                         plt.legend()
                         plt.show()
 
-                if breaker == False:
-                    results.append(
-                        (filename[0],
-                         small_error_aFD, large_error_aFD, small_error_std, large_error_std, count_small_peaks, count_large_peaks, not_entertwined,
-                         ef_pred, ef_label, ef_error, ef_abs_error,
-                         small_hr, large_hr, uneven_hr, fps
-                         )
-                    )
                 else:
                     broken += 1
                     print("Rejected", filename[0])
-                # print(results[-1])
 
                 limiter += 1
                 if limiter == limit:
                     break
 
                 pbar.update()
+
+    n = 1
+    while os.path.exists(os.path.join(destination_folder, f'phase_detection{n}.csv')):
+        n += 1
+    summary = pd.DataFrame(data=phase_predictions)
+    summary.to_csv(os.path.join(destination_folder, f'phase_detection{n}.csv'), header=False, index=False)
+    print('Saved to', os.path.join(destination_folder, f'phase_detection{n}.csv'))
+    
+    print("Rejected:", broken)
+    
+    quit()
 
     summary = pd.DataFrame(data=results,
                            columns=["Filename", "small_error_aFD", "large_error_aFD", "small_error_std", "large_error_std", "count_small_peaks", "count_large_peaks", "not_entertwined",

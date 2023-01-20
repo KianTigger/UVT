@@ -19,6 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
     parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, 
     help="The path to the model. options are './output/UVT_M_CLA', './output/UVT_R_CLA', './output/UVT_M_REG', './output/UVT_R_REG', or './output/UVT_repeat_reg' if you Train the model yourself.")
+    parser.add_argument("--dataset_path", default="../../Datasets/Echonet-Dynamic", type=str, help="The path to the dataset folder containing the 'Videos' foldes and 'FileList.csv' file.")
     args = parser.parse_args()
 
     # if train, test, or predict is not specified, then quit with message
@@ -26,13 +27,8 @@ if __name__ == '__main__':
         print("Please specify whether to train, test, or predict")
         quit()
 
-    # dataset_path = "/data/hjr119/Echonet-Dynamic"
-    dataset_path = "../../Datasets/Echonet-Dynamic"
-    # for HPC Bessemer
-    dataset_path = "../EchoNet-Dynamic"
-
     if args.train:
-        Network.train(  dataset_path=dataset_path,  # path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
+        Network.train(  dataset_path=args.dataset_path,  # path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
                     num_epochs=5,               # number of epoch to train
                     device=[0],                 # "cpu" or gpu ids, ex [0] or [0,1] or [2] etc
                     batch_size=2,               # batch size
@@ -64,7 +60,7 @@ if __name__ == '__main__':
 
     if args.test:
         # Parameters must match train-time parameters, or the weight files wont load
-        Network.test(   dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
+        Network.test(   dataset_path=args.dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
                     SDmode=SDmode,               # SD branch network type: reg (regression) or cla (classification)
                     use_full_videos=True,       # Use full video (no preprocessing other than intensity scaling)
                     latent_dim=1024,            # embedding dimension
@@ -78,7 +74,7 @@ if __name__ == '__main__':
     if args.predict:
         # Parameters must match train-time parameters, or the weight files wont load
         Network.predictEDES(   
-                    dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
+                    dataset_path=args.dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
                     SDmode=SDmode,               # SD branch network type: reg (regression) or cla (classification)
                     use_full_videos=True,       # Use full video (no preprocessing other than intensity scaling)
                     latent_dim=1024,            # embedding dimension
