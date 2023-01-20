@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
-    dataset_path = "../Echonet-Dynamic"
+    dataset_path = "../"
 
     if os.path.exists(dataset_path):
         print("Dataset path does exist.")
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         print("Current directory: " + os.getcwd())
         # also print the contents of the found directory
         print("Contents of found directory: " + str(os.listdir(dataset_path)))
-        
+
 
     # check if dataset path exists, and if not, quit with displaying the directory
     if not os.path.exists(dataset_path):
