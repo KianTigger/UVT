@@ -211,7 +211,6 @@ class EchoSet(torch.utils.data.Dataset):
             print("label length: ", len(label))
             print("key: ", key)
             print("Frames: ", self.frames[key])
-            print("Frames shape: ", self.frames[key].shape)
 
             if self.SDmode == 'cla':
                 label[self.frames[key][0]] = 1 # End systole (small)
