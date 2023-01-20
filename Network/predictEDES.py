@@ -100,8 +100,11 @@ def predictEDES(dataset_path,
 
     with torch.no_grad():
         with tqdm.tqdm(total=len(loader)) as pbar:
-            for (filename, video, label, _, repeat, fps) in loader:
+            for (filename, video, label) in loader:
                 count += 1
+                if count < 10000:
+                    print("Skipping: ", count)
+                    continue
                 nB, nF, nC, nH, nW = video.shape
 
                 # Merge batch and frames dimension

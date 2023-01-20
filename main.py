@@ -19,7 +19,8 @@ if __name__ == '__main__':
     parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
     parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, 
     help="The path to the model. options are './output/UVT_M_CLA', './output/UVT_R_CLA', './output/UVT_M_REG', './output/UVT_R_REG', or './output/UVT_repeat_reg' if you Train the model yourself.")
-    parser.add_argument("--dataset_path", default="../../Datasets/Echonet-Dynamic", type=str, help="The path to the dataset folder containing the 'Videos' foldes and 'FileList.csv' file.")
+    parser.add_argument("--dataset_path", default="../../Datasets/Echonet-Dynamic", type=str, 
+    help="The path to the dataset folder containing the 'Videos' foldes and 'FileList.csv' file.")
     args = parser.parse_args()
 
     # if train, test, or predict is not specified, then quit with message

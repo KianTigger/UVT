@@ -32,6 +32,7 @@ class EchoSet(torch.utils.data.Dataset):
         self.random_clip  = random_clip
         self.attenuation  = 3 # Exponent to smooth the labels, choose odd numbers, not too big
         self.SDmode       = SDmode #reg, cla
+        self.train        = train
 
         self.fnames       = []
         self.outcome      = []
@@ -180,8 +181,10 @@ class EchoSet(torch.utils.data.Dataset):
                 p = self.padding
                 nvideo = np.pad(nvideo, ((0,0),(0,0),(p,p),(p,p)), mode='constant', constant_values=0)
             
-            
-            return filename, nvideo, nlabel, ejection, repeat, self.fps[index]
+            if not(self.train):
+                return filename, nvideo, nlabel
+            else:
+                return filename, nvideo, nlabel, ejection, repeat, self.fps[index]
         
         elif self.mode == 'full':
             path = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -212,8 +215,10 @@ class EchoSet(torch.utils.data.Dataset):
             ejection    = self.ejection[index]
             repeat      = 0
             fps         = self.fps[index]
-            
-            return filename, video, label, ejection, repeat, fps
+            if not(self.train):
+                return filename, video, label
+            else:
+                return filename, video, label, ejection, repeat, fps
         
         elif self.mode == 'sample':
             path = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -303,8 +308,10 @@ class EchoSet(torch.utils.data.Dataset):
             
             if video.shape[0] != 128 or label.shape[0] != 128:
                 raise ValueError('WTF??', self.fixed_length, window_width, video.shape[0], label.shape[0])
-            
-            return filename, video, label, ejection, repeat, fps
+            if not(self.train):
+                return filename, video, label
+            else:
+                return filename, video, label, ejection, repeat, fps
         
         else:
             raise ValueError(self.mode, "is not a proper mode, choose: 'sample', 'full', 'repeat'")
