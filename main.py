@@ -15,10 +15,15 @@ import argparse
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", default=False, type=bool, help="Whether to train the model.")
-    parser.add_argument("--test", default=True, type=bool, help="Whether to test the model.")
+    parser.add_argument("--test", default=False, type=bool, help="Whether to test the model.")
     parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
     parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, help="The path to the model. options are 'UVT_M_CLA', 'UVT_R_CLA', 'UVT_M_REG', 'UVT_R_REG")
     args = parser.parse_args()
+
+    # if train, test, or predict is not specified, then quit with message
+    if not args.train and not args.test and not args.predict:
+        print("Please specify whether to train, test, or predict")
+        quit()
 
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
