@@ -28,7 +28,15 @@ if __name__ == '__main__':
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
-    dataset_path = "../Echonet-Dynamic/"
+    dataset_path = "../Echonet-Dynamic"
+
+    # check if dataset path exists, and if not, quit with displaying the directory
+    if not os.path.exists(dataset_path):
+        print("Dataset path does not exist. Please change the dataset_path variable in main.py to the correct path")
+        print("Current dataset path: " + dataset_path)
+        # also print the current directory
+        print("Current directory: " + os.getcwd())
+        quit()
 
 
     if args.train:
