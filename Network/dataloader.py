@@ -168,6 +168,10 @@ class EchoSet(torch.utils.data.Dataset):
                 repeat += 1
                 
             nvideo = np.stack(nvideo)
+            filename = os.path.splitext(self.fnames[index])[0]
+            if not(self.train):
+                return filename, nvideo
+
             nlabel = np.stack(nlabel)
             
             start_index = np.random.randint(nvideo.shape[0]-self.fixed_length)
@@ -175,16 +179,12 @@ class EchoSet(torch.utils.data.Dataset):
             nvideo = nvideo[start_index:start_index+self.fixed_length]
             nlabel = nlabel[start_index:start_index+self.fixed_length]
             ejection = self.ejection[index]
-            filename = os.path.splitext(self.fnames[index])[0]
             
             if self.padding is not None:
                 p = self.padding
                 nvideo = np.pad(nvideo, ((0,0),(0,0),(p,p),(p,p)), mode='constant', constant_values=0)
             
-            if not(self.train):
-                return filename, nvideo, nlabel
-            else:
-                return filename, nvideo, nlabel, ejection, repeat, self.fps[index]
+            return filename, nvideo, nlabel, ejection, repeat, self.fps[index]
         
         elif self.mode == 'full':
             path = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -205,13 +205,11 @@ class EchoSet(torch.utils.data.Dataset):
             
             filename    = filename = os.path.splitext(self.fnames[index])[0]
             video = np.moveaxis(video, 0, 1)
-            label     = np.zeros(f)
-            print("label: ", label)
-            print("Label shape: ", label.shape)
-            print("label length: ", len(label))
-            print("key: ", key)
-            print("Frames: ", self.frames[key])
 
+            if not(self.train):
+                return filename, video
+
+            label     = np.zeros(f)
             if self.SDmode == 'cla':
                 label[self.frames[key][0]] = 1 # End systole (small)
                 label[self.frames[key][-1]] = 2# End diastole (large)
@@ -221,10 +219,7 @@ class EchoSet(torch.utils.data.Dataset):
             ejection    = self.ejection[index]
             repeat      = 0
             fps         = self.fps[index]
-            if not(self.train):
-                return filename, video, label
-            else:
-                return filename, video, label, ejection, repeat, fps
+            return filename, video, label, ejection, repeat, fps
         
         elif self.mode == 'sample':
             path = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -237,6 +232,10 @@ class EchoSet(torch.utils.data.Dataset):
             video /= 255.0
 
             video = np.moveaxis(video, 0, 1)
+            filename = os.path.splitext(self.fnames[index])[0]
+
+            if not(self.train):
+                return filename, video
             
             samp_size = abs(self.frames[key][0]-self.frames[key][-1])
             if samp_size > self.fixed_length:
@@ -304,7 +303,6 @@ class EchoSet(torch.utils.data.Dataset):
             attention[missing_frames_before:missing_frames_before+window_width] = 1
                 
             ejection = self.ejection[index]
-            filename = os.path.splitext(self.fnames[index])[0]
             repeat      = attention
             fps         = self.fps[index]
             
@@ -314,10 +312,7 @@ class EchoSet(torch.utils.data.Dataset):
             
             if video.shape[0] != 128 or label.shape[0] != 128:
                 raise ValueError('WTF??', self.fixed_length, window_width, video.shape[0], label.shape[0])
-            if not(self.train):
-                return filename, video, label
-            else:
-                return filename, video, label, ejection, repeat, fps
+            return filename, video, label, ejection, repeat, fps
         
         else:
             raise ValueError(self.mode, "is not a proper mode, choose: 'sample', 'full', 'repeat'")

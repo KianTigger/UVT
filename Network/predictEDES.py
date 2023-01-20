@@ -100,7 +100,7 @@ def predictEDES(dataset_path,
 
     with torch.no_grad():
         with tqdm.tqdm(total=len(loader)) as pbar:
-            for (filename, video, label) in loader:
+            for (filename, video) in loader:
                 count += 1
                 if count < 10000:
                     print("Skipping: ", count)
@@ -131,8 +131,8 @@ def predictEDES(dataset_path,
                 if SDmode == 'reg' and dsdtmode == 'full':
 
                     # Prepare ground truth
-                    small_label = torch.where(label[0] == -1)[0][0].item()
-                    large_label = torch.where(label[0] == 1)[0][0].item()
+                    # small_label = torch.where(label[0] == -1)[0][0].item()
+                    # large_label = torch.where(label[0] == 1)[0][0].item()
                     if rm_branch != 'SD':
                         smooth_vec = smooth(class_vec, window=5, rep=3)
 
@@ -196,43 +196,43 @@ def predictEDES(dataset_path,
                             phase_predictions.append((count, filename[0], "ED", ED_predictions))
                             phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
-                    if plot_graph or save_graph:
-                        plt.plot(-class_vec.numpy().reshape(-1),
-                                 label='Network pred', color='b')
-                        es_label = True
-                        ed_label = True
-                        for i in range(len(peak_class)):
-                            if peak_class[i] == 1 and ed_label:
-                                plt.axvline(x=large_label, color='m',
-                                            label='ES label', linewidth=3)
-                                plt.axvline(x=peak_index[i], color='g' if peak_class[i] == 1 else 'r',
-                                            label='ES preds' if peak_class[i] == 1 else 'ED preds')
-                                ed_label = False
-                            elif peak_class[i] == -1 and es_label:
-                                plt.axvline(x=small_label, color='y',
-                                            label='ED label', linewidth=3)
-                                plt.axvline(x=peak_index[i], color='g' if peak_class[i] == 1 else 'r',
-                                            label='ES preds' if peak_class[i] == 1 else 'ED preds')
-                                es_label = False
-                            else:
-                                plt.axvline(
-                                    x=peak_index[i], color='g' if peak_class[i] == 1 else 'r', )
-                        plt.legend()
-                        plt.title(filename[0])
-                        plt.xlabel('Time axis (frames)')
-                        plt.ylabel('Network prediction')
-                        if plot_graph:
-                            plt.show()
-                        if save_graph:
-                            plt.savefig(os.path.join(
-                                destination_folder, "figs", filename[0]+'.pdf'), format='pdf')
-                            plt.clf()
+                    # if plot_graph or save_graph:
+                    #     plt.plot(-class_vec.numpy().reshape(-1),
+                    #              label='Network pred', color='b')
+                    #     es_label = True
+                    #     ed_label = True
+                    #     for i in range(len(peak_class)):
+                    #         if peak_class[i] == 1 and ed_label:
+                    #             plt.axvline(x=large_label, color='m',
+                    #                         label='ES label', linewidth=3)
+                    #             plt.axvline(x=peak_index[i], color='g' if peak_class[i] == 1 else 'r',
+                    #                         label='ES preds' if peak_class[i] == 1 else 'ED preds')
+                    #             ed_label = False
+                    #         elif peak_class[i] == -1 and es_label:
+                    #             plt.axvline(x=small_label, color='y',
+                    #                         label='ED label', linewidth=3)
+                    #             plt.axvline(x=peak_index[i], color='g' if peak_class[i] == 1 else 'r',
+                    #                         label='ES preds' if peak_class[i] == 1 else 'ED preds')
+                    #             es_label = False
+                    #         else:
+                    #             plt.axvline(
+                    #                 x=peak_index[i], color='g' if peak_class[i] == 1 else 'r', )
+                    #     plt.legend()
+                    #     plt.title(filename[0])
+                    #     plt.xlabel('Time axis (frames)')
+                    #     plt.ylabel('Network prediction')
+                    #     if plot_graph:
+                    #         plt.show()
+                    #     if save_graph:
+                    #         plt.savefig(os.path.join(
+                    #             destination_folder, "figs", filename[0]+'.pdf'), format='pdf')
+                    #         plt.clf()
 
                 elif SDmode == 'reg' and dsdtmode == 'repeat':
 
                     if rm_branch != 'SD':
 
-                        label = label[0]
+                        # label = label[0]
 
                         smooth_vec = smooth(class_vec, window=5, rep=1)
 
@@ -269,50 +269,50 @@ def predictEDES(dataset_path,
                         phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
 
-                    if plot_graph:
-                        plt.plot(class_vec.numpy().reshape(-1),
-                                 label='class pred')
-                        plt.plot(label.numpy().reshape(-1),
-                                 label='class label')
-                        for i in range(len(peak_class)):
-                            plt.axvline(
-                                x=peak_index[i], color='g' if peak_class[i] == 1 else 'b')
-                        plt.legend()
-                        plt.show()
+                    # if plot_graph:
+                    #     plt.plot(class_vec.numpy().reshape(-1),
+                    #              label='class pred')
+                    #     plt.plot(label.numpy().reshape(-1),
+                    #              label='class label')
+                    #     for i in range(len(peak_class)):
+                    #         plt.axvline(
+                    #             x=peak_index[i], color='g' if peak_class[i] == 1 else 'b')
+                    #     plt.legend()
+                    #     plt.show()
 
                 elif SDmode == 'reg' and dsdtmode == 'sample':
+                    tempvar = 1
+                    # attention = repeat.view(-1) == 1
+                    # class_vec = class_vec[attention]
+                    # label = label.view(-1).to(dtype=torch.float)[attention]
+                    # # try:
+                    # #     small_label = torch.where(label == -1)[0][0].item()
+                    # # except:
+                    # #     small_label = label.argmin().item()
+                    # # try:
+                    # #     large_label = torch.where(label == 1)[0][0].item()
+                    # # except:
+                    # #     large_label = label.argmax().item()
 
-                    attention = repeat.view(-1) == 1
-                    class_vec = class_vec[attention]
-                    label = label.view(-1).to(dtype=torch.float)[attention]
-                    try:
-                        small_label = torch.where(label == -1)[0][0].item()
-                    except:
-                        small_label = label.argmin().item()
-                    try:
-                        large_label = torch.where(label == 1)[0][0].item()
-                    except:
-                        large_label = label.argmax().item()
+                    # small_pred_index = class_vec.argmin().item()
+                    # large_pred_index = class_vec.argmax().item()
 
-                    small_pred_index = class_vec.argmin().item()
-                    large_pred_index = class_vec.argmax().item()
-
-                    if plot_graph:
-                        plt.plot(class_vec.numpy().reshape(-1),
-                                 label='class pred')
-                        plt.plot(label.numpy().reshape(-1),
-                                 label='class label')
-                        plt.axvline(x=small_pred_index, color='b')
-                        plt.axvline(x=large_pred_index, color='g')
-                        plt.legend()
-                        plt.show()
+                    # if plot_graph:
+                    #     plt.plot(class_vec.numpy().reshape(-1),
+                    #              label='class pred')
+                    #     plt.plot(label.numpy().reshape(-1),
+                    #              label='class label')
+                    #     plt.axvline(x=small_pred_index, color='b')
+                    #     plt.axvline(x=large_pred_index, color='g')
+                    #     plt.legend()
+                    #     plt.show()
 
                 elif SDmode == 'cla' and dsdtmode == 'full':
 
-                    label = label.squeeze()  # [128,]
+                    # label = label.squeeze()  # [128,]
                     # Prepare ground truth
-                    small_label = torch.where(label == 1)[0][0].item()
-                    large_label = torch.where(label == 2)[0][0].item()
+                    # small_label = torch.where(label == 1)[0][0].item()
+                    # large_label = torch.where(label == 2)[0][0].item()
 
                     class_diff = class_vec[:, 1]-class_vec[:, 2]
                     zero_crossing = ((class_diff.sign().roll(
@@ -359,7 +359,7 @@ def predictEDES(dataset_path,
                 elif SDmode == 'cla' and dsdtmode == 'repeat':
 
                     # class_vec [128, 3]
-                    label = label.squeeze()  # [128,]
+                    # label = label.squeeze()  # [128,]
                     class_diff = class_vec[:, 1]-class_vec[:, 2]
                     zero_crossing = ((class_diff.sign().roll(
                         1) - class_diff.sign()) != 0).to(dtype=torch.long)
@@ -369,8 +369,8 @@ def predictEDES(dataset_path,
                     peak_dist = (peak_indices-peak_indices.roll(1))[1:]
                     # mean_dist = peak_dist.to(torch.float).mean()
 
-                    label[:peak_indices[0]] = 0
-                    label[peak_indices[-1]+1:] = 0
+                    # label[:peak_indices[0]] = 0
+                    # label[peak_indices[-1]+1:] = 0
 
                     peak_class = []
                     peak_intensity = []
@@ -395,31 +395,32 @@ def predictEDES(dataset_path,
                     phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
                 elif SDmode == 'cla' and dsdtmode == 'sample':
-                    attention = repeat.view(-1) == 1
-                    class_vec = class_vec[attention]
-                    label = label.view(-1).to(dtype=torch.float)[attention]
+                    tempvar = 1
+                    # attention = repeat.view(-1) == 1
+                    # class_vec = class_vec[attention]
+                    # label = label.view(-1).to(dtype=torch.float)[attention]
 
-                    try:
-                        small_label = torch.where(label == 1)[0][0].item()
-                    except:
-                        small_label = label.argmin().item()
-                    try:
-                        large_label = torch.where(label == 2)[0][0].item()
-                    except:
-                        large_label = label.argmax().item()
+                    # # try:
+                    # #     small_label = torch.where(label == 1)[0][0].item()
+                    # # except:
+                    # #     small_label = label.argmin().item()
+                    # # try:
+                    # #     large_label = torch.where(label == 2)[0][0].item()
+                    # # except:
+                    # #     large_label = label.argmax().item()
 
-                    small_pred_index = class_vec[:, 1].argmax().item()
-                    large_pred_index = class_vec[:, 2].argmax().item()
+                    # small_pred_index = class_vec[:, 1].argmax().item()
+                    # large_pred_index = class_vec[:, 2].argmax().item()
 
-                    if plot_graph:
-                        plt.plot(class_vec.numpy().reshape(-1),
-                                 label='class pred')
-                        plt.plot(label.numpy().reshape(-1),
-                                 label='class label')
-                        plt.axvline(x=small_pred_index, color='b')
-                        plt.axvline(x=large_pred_index, color='g')
-                        plt.legend()
-                        plt.show()
+                    # if plot_graph:
+                    #     plt.plot(class_vec.numpy().reshape(-1),
+                    #              label='class pred')
+                    #     plt.plot(label.numpy().reshape(-1),
+                    #              label='class label')
+                    #     plt.axvline(x=small_pred_index, color='b')
+                    #     plt.axvline(x=large_pred_index, color='g')
+                    #     plt.legend()
+                    #     plt.show()
 
                 else:
                     broken += 1
