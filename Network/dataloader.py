@@ -206,6 +206,13 @@ class EchoSet(torch.utils.data.Dataset):
             filename    = filename = os.path.splitext(self.fnames[index])[0]
             video = np.moveaxis(video, 0, 1)
             label     = np.zeros(f)
+            print("label: ", label)
+            print("Label shape: ", label.shape)
+            print("label length: ", len(label))
+            print("key: ", key)
+            print("Frames: ", self.frames[key])
+            print("Frames shape: ", self.frames[key].shape)
+
             if self.SDmode == 'cla':
                 label[self.frames[key][0]] = 1 # End systole (small)
                 label[self.frames[key][-1]] = 2# End diastole (large)
