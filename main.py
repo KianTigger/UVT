@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument("--test", default=False, type=bool, help="Whether to test the model.")
     parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
     parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, 
-    help="The path to the model. options are 'UVT_M_CLA', 'UVT_R_CLA', 'UVT_M_REG', 'UVT_R_REG', or 'UVT_repeat_reg' if you Train the model yourself.")
+    help="The path to the model. options are './output/UVT_M_CLA', './output/UVT_R_CLA', './output/UVT_M_REG', './output/UVT_R_REG', or './output/UVT_repeat_reg' if you Train the model yourself.")
     args = parser.parse_args()
 
     # if train, test, or predict is not specified, then quit with message
@@ -54,9 +54,9 @@ if __name__ == '__main__':
                     )
     
     # add a variable for SDmode depending on the model_path
-    if args.model_path == "UVT_M_CLA" or args.model_path == "UVT_R_CLA":
+    if args.model_path == "./output/UVT_M_CLA" or args.model_path == "./output/UVT_R_CLA":
         SDmode = "cla"
-    elif args.model_path == "UVT_M_REG" or args.model_path == "UVT_R_REG" or args.model_path == "UVT_repeat_reg":
+    elif args.model_path == "./output/UVT_M_REG" or args.model_path == "./output/UVT_R_REG" or args.model_path == "./output/UVT_repeat_reg":
         SDmode = "reg"
     else:
         print("Please specify a valid model_path")
