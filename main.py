@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # dataset_path = "/data/hjr119/Echonet-Dynamic"
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
-    dataset_path = "../Echonet-Dynamic"
+    dataset_path = "../Echonet-Dynamic/"
 
 
     if args.train:
