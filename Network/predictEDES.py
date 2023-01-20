@@ -87,12 +87,10 @@ def predictEDES(dataset_path,
 
     limit = -10
     limiter = 0
-    plot_graph = False
-    save_graph = False
-    get_us = False  # manual
+    # plot_graph = False
+    # save_graph = False
     mirror_vid = False  # worsen results
 
-    results = []
     broken = 0
 
     phase_predictions = []
@@ -102,18 +100,20 @@ def predictEDES(dataset_path,
         with tqdm.tqdm(total=len(loader)) as pbar:
             for (filename, video) in loader:
                 count += 1
-                # if count < 10000:
-                #     print("Skipping: ", count)
-                #     continue
+            
                 nB, nF, nC, nH, nW = video.shape
 
                 # Merge batch and frames dimension
-                # if mirror_vid:
-                #     offset = fps.item()
-                #     video = video[0]  # squeeze batch dimension
-                #     video = torch.cat((video.flip(0)[-offset:-1, :, :, :], video, video.flip(0)[
-                #                       1:offset, :, :, :]), dim=0)  # mirror start and end
-                #     nF, nC, nH, nW = video.shape  # update nF
+                if mirror_vid:
+                    fps = 0
+                    for i in range(video.size(0)):
+                        fps += video[i].shape[0]
+                    fps = fps / video.size(0)
+                    offset = fps
+                    video = video[0]  # squeeze batch dimension
+                    video = torch.cat((video.flip(0)[-offset:-1, :, :, :], video, video.flip(0)[
+                                      1:offset, :, :, :]), dim=0)  # mirror start and end
+                    nF, nC, nH, nW = video.shape  # update nF
                 if not(mirror_vid):
                     video = torch.cat(
                         ([video[i] for i in range(video.size(0))]), dim=0)
@@ -130,9 +130,6 @@ def predictEDES(dataset_path,
 
                 if SDmode == 'reg' and dsdtmode == 'full':
 
-                    # Prepare ground truth
-                    # small_label = torch.where(label[0] == -1)[0][0].item()
-                    # large_label = torch.where(label[0] == 1)[0][0].item()
                     if rm_branch != 'SD':
                         smooth_vec = smooth(class_vec, window=5, rep=3)
 
@@ -242,8 +239,8 @@ def predictEDES(dataset_path,
 
                         # Find heart phases and clean noise
                         peak_indices = torch.where(zero_crossing == 1)[0]
-                        peak_dist = (peak_indices-peak_indices.roll(1))[1:]
-                        mean_dist = peak_dist.to(torch.float).mean()
+                        
+                        
 
                         peak_class = []
                         peak_intensity = []
@@ -277,33 +274,6 @@ def predictEDES(dataset_path,
                     #     for i in range(len(peak_class)):
                     #         plt.axvline(
                     #             x=peak_index[i], color='g' if peak_class[i] == 1 else 'b')
-                    #     plt.legend()
-                    #     plt.show()
-
-                elif SDmode == 'reg' and dsdtmode == 'sample':
-                    tempvar = 1
-                    # attention = repeat.view(-1) == 1
-                    # class_vec = class_vec[attention]
-                    # label = label.view(-1).to(dtype=torch.float)[attention]
-                    # # try:
-                    # #     small_label = torch.where(label == -1)[0][0].item()
-                    # # except:
-                    # #     small_label = label.argmin().item()
-                    # # try:
-                    # #     large_label = torch.where(label == 1)[0][0].item()
-                    # # except:
-                    # #     large_label = label.argmax().item()
-
-                    # small_pred_index = class_vec.argmin().item()
-                    # large_pred_index = class_vec.argmax().item()
-
-                    # if plot_graph:
-                    #     plt.plot(class_vec.numpy().reshape(-1),
-                    #              label='class pred')
-                    #     plt.plot(label.numpy().reshape(-1),
-                    #              label='class label')
-                    #     plt.axvline(x=small_pred_index, color='b')
-                    #     plt.axvline(x=large_pred_index, color='g')
                     #     plt.legend()
                     #     plt.show()
 
@@ -366,7 +336,7 @@ def predictEDES(dataset_path,
                     zero_crossing[0] = 0
 
                     peak_indices = torch.where(zero_crossing == 1)[0]
-                    peak_dist = (peak_indices-peak_indices.roll(1))[1:]
+                    
                     # mean_dist = peak_dist.to(torch.float).mean()
 
                     # label[:peak_indices[0]] = 0
@@ -394,34 +364,6 @@ def predictEDES(dataset_path,
                     phase_predictions.append((count, filename[0], "ED", ED_predictions))
                     phase_predictions.append((count, filename[0], "ES", ES_predictions))
 
-                elif SDmode == 'cla' and dsdtmode == 'sample':
-                    tempvar = 1
-                    # attention = repeat.view(-1) == 1
-                    # class_vec = class_vec[attention]
-                    # label = label.view(-1).to(dtype=torch.float)[attention]
-
-                    # # try:
-                    # #     small_label = torch.where(label == 1)[0][0].item()
-                    # # except:
-                    # #     small_label = label.argmin().item()
-                    # # try:
-                    # #     large_label = torch.where(label == 2)[0][0].item()
-                    # # except:
-                    # #     large_label = label.argmax().item()
-
-                    # small_pred_index = class_vec[:, 1].argmax().item()
-                    # large_pred_index = class_vec[:, 2].argmax().item()
-
-                    # if plot_graph:
-                    #     plt.plot(class_vec.numpy().reshape(-1),
-                    #              label='class pred')
-                    #     plt.plot(label.numpy().reshape(-1),
-                    #              label='class label')
-                    #     plt.axvline(x=small_pred_index, color='b')
-                    #     plt.axvline(x=large_pred_index, color='g')
-                    #     plt.legend()
-                    #     plt.show()
-
                 else:
                     broken += 1
                     print("Rejected", filename[0])
@@ -440,93 +382,9 @@ def predictEDES(dataset_path,
     print('Saved to', os.path.join(destination_folder, f'phase_detection{n}.csv'))
     
     print("Rejected:", broken)
+
+    return phase_predictions
     
-    quit()
-
-    summary = pd.DataFrame(data=results,
-                           columns=["Filename", "small_error_aFD", "large_error_aFD", "small_error_std", "large_error_std", "count_small_peaks", "count_large_peaks", "not_entertwined",
-                                    "ef_pred", "ef_label", "ef_error", "ef_abs_error",
-                                    "small_hr", "large_hr", "uneven_hr", "fps"])
-    summary.to_csv(os.path.join(destination_folder, "test.csv"))
-    print('Saved to', os.path.join(destination_folder, "test.csv"))
-
-    # EF Pred Metrics
-    clean_idx = np.array([not (summary["not_entertwined"][i]
-                         or summary["uneven_hr"][i]) for i in range(len(summary))])
-    missed_count = clean_idx.shape[0] - clean_idx.sum()
-    print("Misses:", missed_count)
-    # clean_gt   = np.array([i for (i, k) in zip(summary["ef_label"].to_numpy(), clean_idx) if k])
-    # clean_pred = np.array([i for (i, k) in zip(summary["ef_pred"].to_numpy(), clean_idx) if k])
-    L1_pred = np.mean(
-        np.abs((summary["ef_label"].to_numpy() - summary["ef_pred"].to_numpy())))
-    L1_std = np.std(
-        np.abs((summary["ef_label"].to_numpy() - summary["ef_pred"].to_numpy())))
-    L2_pred = np.sqrt(np.mean(
-        np.square((summary["ef_label"].to_numpy() - summary["ef_pred"].to_numpy()))))
-    R2_pred = sklearn.metrics.r2_score(
-        summary["ef_label"].to_numpy(), summary["ef_pred"].to_numpy())
-    # clean_L1_pred = np.mean(np.abs((clean_gt - clean_pred)))
-    # clean_L2_pred = np.sqrt(np.mean(np.square((clean_gt - clean_pred))))
-    # clean_R2_pred = sklearn.metrics.r2_score(clean_gt,clean_pred)
-    dt = np.array([[L1_pred, 0],
-                   [L2_pred, 0],
-                   [R2_pred, 0]])
-    df = pd.DataFrame(data=dt, columns=["Pred", "Clean Pred"], index=[
-                      "MAE", "RMSE", "R²"])
-    print(df)
-    print("std", L1_std)
-
-    aTD = np.mean(
-        abs(summary["small_error_aFD"].to_numpy()/summary["fps"].to_numpy()))
-    print('ES Temporal error (s):', aTD)
-    aTD = np.mean(
-        abs(summary["large_error_aFD"].to_numpy()/summary["fps"].to_numpy()))
-    print('ED Temporal error (s):', aTD)
-
-    # aFD
-    es_afd = np.mean(abs(summary["small_error_aFD"].to_numpy()))
-    es_std = np.std(abs(summary["small_error_aFD"].to_numpy()))
-    ed_afd = np.mean(abs(summary["large_error_aFD"].to_numpy()))
-    ed_std = np.std(abs(summary["large_error_aFD"].to_numpy()))
-
-    dt = np.array([[es_afd, ed_afd],
-                   [es_std, ed_std]])
-    df = pd.DataFrame(data=dt, columns=["ED", "ES"], index=["aFD", "std"])
-    print(df)
-
-    # SD Pred Metrics
-    tolerance = [0, 1, 2, 3, 5, 10]
-    small_er = dict()
-    large_er = dict()
-    small_er_pctg = dict()
-    large_er_pctg = dict()
-    small_er = dict()
-    large_er = dict()
-    small_er_pctg = dict()
-    large_er_pctg = dict()
-    for t in tolerance:
-        small_er[t] = (abs(summary["small_error_aFD"]).to_numpy() <= t).sum()
-        large_er[t] = (abs(summary["large_error_aFD"]).to_numpy() <= t).sum()
-        small_er_pctg[t] = small_er[t]/len(summary)
-        large_er_pctg[t] = large_er[t]/len(summary)
-    dt = np.array([[0, small_er[0], small_er_pctg[0], large_er[0], large_er_pctg[0]],
-                   [1, small_er[1], small_er_pctg[1],
-                       large_er[1], large_er_pctg[1]],
-                   [2, small_er[2], small_er_pctg[2],
-                       large_er[2], large_er_pctg[2]],
-                   [3, small_er[3], small_er_pctg[3],
-                       large_er[3], large_er_pctg[3]],
-                   [5, small_er[5], small_er_pctg[5],
-                       large_er[5], large_er_pctg[5]],
-                   [10, small_er[10], small_er_pctg[10],
-                       large_er[10], large_er_pctg[10]],
-                   ])
-    df = pd.DataFrame(data=dt, columns=[
-                      "Tolerance", "Small", "Small %", "Large", "Large %"], index=["0", "1", "2", "3", "4", "5"])
-    print(df)
-
-    print("Rejected:", broken)
-
 
 def smooth(vec, window=5, rep=1):
     weight = torch.ones((1, 1, window))/window
@@ -537,24 +395,3 @@ def smooth(vec, window=5, rep=1):
             vec, weight, bias=None, stride=1, padding=pad, dilation=1, groups=1).squeeze()
     return vec
 
-
-def get_heartrate(c_list):
-    if len(c_list) > 1:
-        c_dist = []
-        for i in range(len(c_list)-1):
-            c_dist.append(c_list[i+1] - c_list[i])
-
-        c_min, c_mean, c_max, c_std = np.min(c_dist), np.mean(
-            c_dist), np.max(c_dist), np.std(c_dist)
-    elif len(c_list) == 1:
-        c_min, c_mean, c_max, c_std = c_list[0], c_list[0], c_list[0], 0
-    else:
-        c_min, c_mean, c_max, c_std = 0, 0, 0, 0
-
-    return c_min, c_mean, c_max, c_std, len(c_list)
-
-
-def butter_lowpass_filter(data, cutOff, fs, order=4):
-    sos = scipy.signal.butter(order, cutOff/fs, 'lp', output='sos')
-    filtered = scipy.signal.sosfilt(sos, data)
-    return filtered
