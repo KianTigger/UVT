@@ -17,7 +17,8 @@ if __name__ == '__main__':
     parser.add_argument("--train", default=False, type=bool, help="Whether to train the model.")
     parser.add_argument("--test", default=False, type=bool, help="Whether to test the model.")
     parser.add_argument("--predict", default=False, type=bool, help="Whether to predict using the model.")
-    parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, help="The path to the model. options are 'UVT_M_CLA', 'UVT_R_CLA', 'UVT_M_REG', 'UVT_R_REG")
+    parser.add_argument("--model_path", default="./output/UVT_R_REG", type=str, 
+    help="The path to the model. options are 'UVT_M_CLA', 'UVT_R_CLA', 'UVT_M_REG', 'UVT_R_REG', or 'UVT_repeat_reg' if you Train the model yourself.")
     args = parser.parse_args()
 
     # if train, test, or predict is not specified, then quit with message
@@ -29,26 +30,6 @@ if __name__ == '__main__':
     dataset_path = "../../Datasets/Echonet-Dynamic"
     # for HPC Bessemer
     dataset_path = "../EchoNet-Dynamic"
-
-    if os.path.exists(dataset_path):
-        print("Dataset path does exist.")
-        print("Current dataset path: " + dataset_path)
-        # also print the current directory
-        print("Current directory: " + os.getcwd())
-        # also print the contents of the found directory
-        print("Contents of found directory: " + str(os.listdir(dataset_path)))
-
-
-    # check if dataset path exists, and if not, quit with displaying the directory
-    if not os.path.exists(dataset_path):
-        print("Dataset path does not exist. Please change the dataset_path variable in main.py to the correct path")
-        print("Current dataset path: " + dataset_path)
-        # also print the current directory
-        print("Current directory: " + os.getcwd())
-        # also print the contents of the parent directory
-        print("Contents of parent directory: " + str(os.listdir(os.path.dirname(os.getcwd()))))
-        quit()
-
 
     if args.train:
         Network.train(  dataset_path=dataset_path,  # path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
@@ -71,11 +52,20 @@ if __name__ == '__main__':
                     use_conv = False,           # use convolutions instead of MLP for the regressors - worse results
                     attention_heads = 16        # number of attention heads in each Transformer
                     )
+    
+    # add a variable for SDmode depending on the model_path
+    if args.model_path == "UVT_M_CLA" or args.model_path == "UVT_R_CLA":
+        SDmode = "cla"
+    elif args.model_path == "UVT_M_REG" or args.model_path == "UVT_R_REG" or args.model_path == "UVT_repeat_reg":
+        SDmode = "reg"
+    else:
+        print("Please specify a valid model_path")
+        quit()
 
     if args.test:
         # Parameters must match train-time parameters, or the weight files wont load
         Network.test(   dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
-                    SDmode='reg',               # SD branch network type: reg (regression) or cla (classification)
+                    SDmode=SDmode,               # SD branch network type: reg (regression) or cla (classification)
                     use_full_videos=True,       # Use full video (no preprocessing other than intensity scaling)
                     latent_dim=1024,            # embedding dimension
                     num_hidden_layers=16,       # Number of Transformers
@@ -89,7 +79,7 @@ if __name__ == '__main__':
         # Parameters must match train-time parameters, or the weight files wont load
         Network.predictEDES(   
                     dataset_path=dataset_path,  # Path to the dataset folder containing the "Videos" foldes and "FileList.csv" file
-                    SDmode='reg',               # SD branch network type: reg (regression) or cla (classification)
+                    SDmode=SDmode,               # SD branch network type: reg (regression) or cla (classification)
                     use_full_videos=True,       # Use full video (no preprocessing other than intensity scaling)
                     latent_dim=1024,            # embedding dimension
                     num_hidden_layers=16,       # Number of Transformers
