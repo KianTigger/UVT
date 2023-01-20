@@ -36,6 +36,8 @@ if __name__ == '__main__':
         print("Current dataset path: " + dataset_path)
         # also print the current directory
         print("Current directory: " + os.getcwd())
+        # also print the contents of the parent directory
+        print("Contents of parent directory: " + str(os.listdir(os.path.dirname(os.getcwd()))))
         quit()
 
 
