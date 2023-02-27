@@ -386,7 +386,7 @@ def predictEDES(dataset_path,
     df = pd.DataFrame(phase_predictions, columns=["FileName", "ED Prediction", "ES Prediction"])
 
     # save the dataframe to a CSV file
-    df.to_csv("PhasesList.csv", index=False)
+    df.to_csv("PhasesPredictionsList.csv", index=False)
 
     n = 1
     while os.path.exists(os.path.join(destination_folder, f'phase_detection{n}.csv')):
