@@ -184,7 +184,7 @@ class EchoSet(torch.utils.data.Dataset):
                 p = self.padding
                 nvideo = np.pad(nvideo, ((0,0),(0,0),(p,p),(p,p)), mode='constant', constant_values=0)
             
-            return filename, nvideo, nlabel, ejection, repeat, self.fps[index]
+            return filename, nvideo, nlabel, ejection, repeat, 50
         
         elif self.mode == 'full':
             path = os.path.join(self.folder, "Videos", self.fnames[index])
@@ -218,7 +218,7 @@ class EchoSet(torch.utils.data.Dataset):
                 label[self.frames[key][-1]] = 1# End diastole (large)
             ejection    = self.ejection[index]
             repeat      = 0
-            fps         = self.fps[index]
+            fps         = 50
             return filename, video, label, ejection, repeat, fps
         
         elif self.mode == 'sample':
@@ -304,7 +304,7 @@ class EchoSet(torch.utils.data.Dataset):
                 
             ejection = self.ejection[index]
             repeat      = attention
-            fps         = self.fps[index]
+            fps         = 50
             
             if self.padding is not None:
                 p = self.padding
