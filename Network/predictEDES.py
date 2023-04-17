@@ -190,8 +190,10 @@ def predictEDES(dataset_path,
                                 peak_class, peak_index) if c == -1]
                             ES_predictions = [i.item() for c, i in zip(
                                 peak_class, peak_index) if c == 1]
-                            phase_predictions.append((count, filename[0], "ED", ED_predictions))
-                            phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                            # phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                            # phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                            phase_predictions.append([filename[0], ED_predictions, ES_predictions])
+
 
                     # if plot_graph or save_graph:
                     #     plt.plot(-class_vec.numpy().reshape(-1),
@@ -262,8 +264,10 @@ def predictEDES(dataset_path,
                             peak_class, peak_index) if c == -1]
                         ES_predictions = [i.item() for c, i in zip(
                             peak_class, peak_index) if c == 1]
-                        phase_predictions.append((count, filename[0], "ED", ED_predictions))
-                        phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                        # phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                        # phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                        phase_predictions.append([filename[0], ED_predictions, ES_predictions])
+
 
 
                     # if plot_graph:
@@ -323,8 +327,10 @@ def predictEDES(dataset_path,
                             peak_class, peak_index) if c == 1]
                         ES_predictions = [i for c, i in zip(
                             peak_class, peak_index) if c == 2]
-                        phase_predictions.append((count, filename[0], "ED", ED_predictions))
-                        phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                        # phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                        # phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                        phase_predictions.append([filename[0], ED_predictions, ES_predictions])
+
 
                 elif SDmode == 'cla' and dsdtmode == 'repeat':
 
@@ -361,8 +367,10 @@ def predictEDES(dataset_path,
                         peak_class, peak_index) if c == 1]
                     ES_predictions = [i for c, i in zip(
                         peak_class, peak_index) if c == 2]
-                    phase_predictions.append((count, filename[0], "ED", ED_predictions))
-                    phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                    # phase_predictions.append((count, filename[0], "ED", ED_predictions))
+                    # phase_predictions.append((count, filename[0], "ES", ES_predictions))
+                    phase_predictions.append([filename[0], ED_predictions, ES_predictions])
+
 
                 else:
                     broken += 1
@@ -373,6 +381,12 @@ def predictEDES(dataset_path,
                     break
 
                 pbar.update()
+
+    # create a dataframe from final_predictions
+    df = pd.DataFrame(phase_predictions, columns=["FileName", "ED Prediction", "ES Prediction"])
+
+    # save the dataframe to a CSV file
+    df.to_csv("PhasesPredictionsList.csv", index=False)
 
     n = 1
     while os.path.exists(os.path.join(destination_folder, f'phase_detection_pediatric{n}.csv')):
