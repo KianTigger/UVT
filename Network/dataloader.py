@@ -45,69 +45,69 @@ class EchoSet(torch.utils.data.Dataset):
         with open(self.folder / "FileList.csv") as f:
             self.header   = f.readline().strip().split(",")
             filenameIndex = self.header.index("FileName")
-            splitIndex    = self.header.index("Split")
+            # splitIndex    = self.header.index("Split")
             efIndex       = self.header.index("EF")
-            fpsIndex      = self.header.index("FPS")
+            # fpsIndex      = self.header.index("FPS")
             for line in f:
                 lineSplit = line.strip().split(',')
                 
                 # Get name of the video file
                 fileName = os.path.splitext(lineSplit[filenameIndex])[0]+".avi"
                 # Get subset category (train, val, test)
-                fileMode = lineSplit[splitIndex].lower()
+                # fileMode = lineSplit[splitIndex].lower()
                 
                 # Get EF
                 ef = lineSplit[efIndex]
                 
-                fps = lineSplit[fpsIndex]
+                # fps = lineSplit[fpsIndex]
                 
                 # Keep only entries where the video exist and "mode" corresponds to what is asked
-                if split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
-                    self.fnames.append(fileName)
-                    self.outcome.append(lineSplit)
-                    self.ejection.append(float(ef))
-                    self.fps.append(int(fps))
+                # if split in ["all", fileMode] and os.path.exists(self.folder / "Videos" / fileName):
+                self.fnames.append(fileName)
+                # self.outcome.append(lineSplit)
+                self.ejection.append(float(ef))
+                # self.fps.append(int(fps))
                     
 
         self.frames = collections.defaultdict(list)
-        self.trace = collections.defaultdict(_defaultdict_of_lists)
+        # self.trace = collections.defaultdict(_defaultdict_of_lists)
 
-        # Volume and frames metadata - not used in UVT
-        with open(self.folder / "VolumeTracings.csv") as f:
-            header = f.readline().strip().split(",")
-            assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
+        # # Volume and frames metadata - not used in UVT
+        # with open(self.folder / "VolumeTracings.csv") as f:
+        #     header = f.readline().strip().split(",")
+        #     assert header == ["FileName", "X1", "Y1", "X2", "Y2", "Frame"]
 
-            # Read lines one by one and store processed data
-            for line in f:
-                filename, x1, y1, x2, y2, frame = line.strip().split(',')
-                x1 = float(x1)
-                y1 = float(y1)
-                x2 = float(x2)
-                y2 = float(y2)
-                frame = int(frame)
-                filename = os.path.splitext(filename)[0]
+        #     # Read lines one by one and store processed data
+        #     for line in f:
+        #         filename, x1, y1, x2, y2, frame = line.strip().split(',')
+        #         x1 = float(x1)
+        #         y1 = float(y1)
+        #         x2 = float(x2)
+        #         y2 = float(y2)
+        #         frame = int(frame)
+        #         filename = os.path.splitext(filename)[0]
                 
-                # New frame index for the given filename
-                if frame not in self.trace[filename]:
-                    self.frames[filename].append(frame)
+        #         # New frame index for the given filename
+        #         if frame not in self.trace[filename]:
+        #             self.frames[filename].append(frame)
                 
-                # Add volume lines to trace
-                self.trace[filename][frame].append((x1, y1, x2, y2))
+        #         # Add volume lines to trace
+        #         self.trace[filename][frame].append((x1, y1, x2, y2))
         
-        # Transform into numpy array
-        for filename in self.frames:
-            for frame in self.frames[filename]:
-                self.trace[filename][frame] = np.array(self.trace[filename][frame])
+        # # Transform into numpy array
+        # for filename in self.frames:
+        #     for frame in self.frames[filename]:
+        #         self.trace[filename][frame] = np.array(self.trace[filename][frame])
         
-        # Reject all files which do not have both ED and ES frames if train is True
-        if train:
-            keep = [(len(self.frames[os.path.splitext(f)[0]]) >= 2) and (abs(self.frames[os.path.splitext(f)[0]][0] - self.frames[os.path.splitext(f)[0]][-1]) > self.min_length) for f in self.fnames]
+        # # Reject all files which do not have both ED and ES frames if train is True
+        # if train:
+        #     keep = [(len(self.frames[os.path.splitext(f)[0]]) >= 2) and (abs(self.frames[os.path.splitext(f)[0]][0] - self.frames[os.path.splitext(f)[0]][-1]) > self.min_length) for f in self.fnames]
 
-            # Prepare for getitem
-            self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
-            self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
-            self.ejection = [f for (f, k) in zip(self.ejection, keep) if k]
-            self.fps = [f for (f, k) in zip(self.fps, keep) if k]
+        #     # Prepare for getitem
+        #     self.fnames = [f for (f, k) in zip(self.fnames, keep) if k]
+        #     self.outcome = [f for (f, k) in zip(self.outcome, keep) if k]
+        #     self.ejection = [f for (f, k) in zip(self.ejection, keep) if k]
+        #     self.fps = [f for (f, k) in zip(self.fps, keep) if k]
             
     def __getitem__(self, index):
         

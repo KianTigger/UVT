@@ -375,11 +375,11 @@ def predictEDES(dataset_path,
                 pbar.update()
 
     n = 1
-    while os.path.exists(os.path.join(destination_folder, f'phase_detection{n}.csv')):
+    while os.path.exists(os.path.join(destination_folder, f'phase_detection_pediatric{n}.csv')):
         n += 1
     summary = pd.DataFrame(data=phase_predictions)
-    summary.to_csv(os.path.join(destination_folder, f'phase_detection{n}.csv'), header=False, index=False)
-    print('Saved to', os.path.join(destination_folder, f'phase_detection{n}.csv'))
+    summary.to_csv(os.path.join(destination_folder, f'phase_detection_pediatric{n}.csv'), header=False, index=False)
+    print('Saved to', os.path.join(destination_folder, f'phase_detection_pediatric{n}.csv'))
     
     print("Rejected:", broken)
 
